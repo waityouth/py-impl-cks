@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SKP Mall Navigation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; }
+
+#container { position: relative; max-width: 1024px; margin: 0 auto; height: 100vh; }
+
+canvas { display: block; width: 100%; height: 100%; }
+
+/* 楼层切换按钮 */
+#floorBtns { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; z-index: 10; }
+#floorBtns button { width: 48px; height: 48px; border: 2px solid #555; border-radius: 8px;
+    background: rgba(30, 30, 60, 0.85); color: #ccc; font-size: 16px; font-weight: bold; cursor: pointer; }
+#floorBtns button.active { border-color: #ff6b6b; background: #ff6b6b; color: #fff; }
+#floorBtns button:hover { border-color: #aaa; }
+
+/* 搜索按钮 */
+#searchBtn { position: absolute; top: 10px; right: 220px; width: 48px; height: 48px; border: none;
+    border-radius: 8px; background: rgba(162, 75, 199, 0.85); color: #fff; font-size: 14px; cursor: pointer; z-index: 10; }
+
+/* 排序按钮 */
+#sortBtn { position: absolute; top: 64px; right: 10px; width: 48px; height: 48px; border: none;
+    border-radius: 8px; background: rgba(255, 0, 0, 0.85); color: #fff; font-size: 14px; cursor: pointer; z-index: 10; }
+
+/* 搜索弹窗 */
+#searchOverlay { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 750px; height: 420px; background: #2a2a3e; border: 2px solid #555; border-radius: 12px; z-index: 100;
+    padding: 12px; }
+#searchOverlay input { width: 100%; padding: 10px; font-size: 16px; border: none; border-radius: 6px;
+    background: #3a3a4e; color: #fff; }
+#searchOverlay .close { position: absolute; top: 8px; right: 8px; background: #e74c3c; color: #fff;
+    border: none; border-radius: 6px; padding: 6px 14px; cursor: pointer; }
+#searchResults { margin-top: 10px; max-height: 320px; overflow-y: auto; }
+#searchResults .item { padding: 10px 14px; background: #3a3a4e; margin: 4px 0; border-radius: 6px;
+    cursor: pointer; color: #ddd; }
+#searchResults .item:hover { background: #4a4a5e; }
+
+/* 分类排序弹窗 */
+#sortOverlay { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 700px; height: 420px; background: #2a2a3e; border: 2px solid #555; border-radius: 12px; z-index: 100;
+    padding: 12px; }
+#sortOverlay .close { position: absolute; top: 8px; right: 8px; background: #e74c3c; color: #fff;
+    border: none; border-radius: 6px; padding: 6px 14px; cursor: pointer; }
+.catBtns { display: flex; flex-wrap: wrap; gap: 6px; }
+.catBtns button { padding: 8px 16px; border: none; border-radius: 6px; background: #a24bc7;
+    color: #fff; cursor: pointer; font-size: 14px; }
+.catBtns button:hover { background: #822ba7; }
+#sortResults { margin-top: 10px; max-height: 300px; overflow-y: auto; }
+#sortResults .item { padding: 10px 14px; background: #3a3a4e; margin: 4px 0; border-radius: 6px;
+    cursor: pointer; color: #ddd; }
+#sortResults .item:hover { background: #4a4a5e; }
+
+/* 商铺详情弹窗 */
+#detailOverlay { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 800px; height: 520px; background: #2a2a3e; border: 2px solid #555; border-radius: 12px; z-index: 100;
+    padding: 16px; color: #eee; font-size: 14px; }
+#detailOverlay .close { position: absolute; top: 8px; right: 8px; background: #e74c3c; color: #fff;
+    border: none; border-radius: 6px; padding: 6px 14px; cursor: pointer; }
+#detailOverlay h2 { margin-bottom: 4px; }
+#detailOverlay .meta { color: #aaa; margin-bottom: 8px; }
+#detailOverlay .desc { background: #3a3a4e; padding: 12px; border-radius: 6px; margin: 10px 0; max-height: 120px; overflow-y: auto; }
+#detailOverlay .stars { display: flex; align-items: center; gap: 6px; margin: 8px 0; }
+.star-bar { width: 200px; height: 24px; background: #444; border-radius: 12px; position: relative; cursor: pointer; }
+.star-fill { height: 100%; background: #f1c40f; border-radius: 12px; transition: width 0.2s; }
+#detailOverlay .comments { max-height: 180px; overflow-y: auto; margin: 10px 0; }
+#detailOverlay .comment { background: #3a3a4e; padding: 6px 10px; margin: 3px 0; border-radius: 6px; font-size: 13px; }
+.writeReview { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+.writeReview input[type=range] { flex: 1; }
+.writeReview input[type=text] { flex: 3; padding: 6px; border-radius: 6px; border: none; background: #3a3a4e; color: #fff; }
+.writeReview button { padding: 6px 14px; background: #27ae60; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+.writeReview button:hover { background: #2ecc71; }
+
+/* 路径信息条 */
+#pathInfo { display: none; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.8); color: #f1c40f; padding: 6px 20px; border-radius: 0 0 10px 10px;
+    font-size: 14px; z-index: 20; white-space: nowrap; max-width: 90%; overflow: hidden; text-overflow: ellipsis; }
+
+/* 找路按钮（F1/F2层显示） */
+#findBtns { position: absolute; bottom: 10px; right: 10px; display: flex; gap: 6px; z-index: 10; }
+#findBtns button { padding: 8px 14px; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; }
+.find-serve { background: #e74c3c; color: #fff; }
+.find-escape { background: #27ae60; color: #fff; }
+.find-lift { background: #2980b9; color: #fff; }
+.find-wc { background: #8e44ad; color: #fff; }
+#findBtns button:hover { opacity: 0.85; }
+</style>
+</head>
+<body>
+<div id="container">
+  <canvas id="mapCanvas"></canvas>
+
+  <div id="floorBtns">
+    <button data-floor="F0">F0</button>
+    <button data-floor="F1">F1</button>
+    <button data-floor="F2">F2</button>
+    <button data-floor="F3">F3</button>
+  </div>
+
+  <button id="searchBtn">search</button>
+  <button id="sortBtn">sort</button>
+
+  <div id="pathInfo"></div>
+
+  <div id="findBtns" style="display:none;">
+    <button id="findServe" class="find-serve" data-target="serve">find serve</button>
+    <button id="findEscape" class="find-escape" data-target="escape">find escape</button>
+    <button id="findLift" class="find-lift" data-target="lift">find lift</button>
+    <button id="findWC" class="find-wc" data-target="wc">find WC</button>
+  </div>
+
+  <div id="searchOverlay">
+    <button class="close">X</button>
+    <input type="text" placeholder="Search stores..." id="searchInput">
+    <div id="searchResults"></div>
+  </div>
+
+  <div id="sortOverlay">
+    <button class="close">X</button>
+    <div class="catBtns"></div>
+    <div id="sortResults"></div>
+  </div>
+
+  <div id="detailOverlay">
+    <button class="close">X</button>
+    <h2 id="detailName"></h2>
+    <div class="meta" id="detailMeta"></div>
+    <div class="desc" id="detailDesc"></div>
+    <div class="stars">
+      <span>Rating:</span>
+      <div class="star-bar" id="starBar"><div class="star-fill" id="starFill"></div></div>
+      <span id="starRating">0.0</span>
+    </div>
+    <div class="comments" id="detailComments"></div>
+    <div class="writeReview">
+      <input type="range" min="0.5" max="5.0" step="0.5" value="5.0" id="reviewScore">
+      <span id="reviewScoreLabel">5.0</span>
+      <input type="text" placeholder="Write a comment..." id="reviewText" maxlength="60">
+      <button id="submitReview">Submit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== 全局状态 ====================
+const W = 1024, H = 600;
+let currentFloor = "F0";
+let currentDetailStore = "";
+let clickPoint = null;
+let pathLine = null;
+let currentStores = [];
+
+const FLOOR_COLORS = { F0: "#1a1a2e", F1: "#1e1e35", F2: "#1e1e35", F3: "#1e1e35" };
+const CAT_COLORS = {
+    Luxury: "#ff8c00", Watches: "#0074e4", Beauty: "#ff69b4",
+    Food: "#ff5722", Electronics: "#00bcd4", Lifestyle: "#2ecc71"
+};
+const CATEGORIES = ["Luxury", "Watches", "Beauty", "Food", "Electronics", "Lifestyle"];
+
+const canvas = document.getElementById("mapCanvas");
+const ctx = canvas.getContext("2d");
+
+function resizeCanvas() {
+    const container = document.getElementById("container");
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+}
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
+
+// ==================== 坐标转换 ====================
+function scaleX(x) { return x / W * canvas.width; }
+function scaleY(y) { return y / H * canvas.height; }
+function unscaleX(x) { return x / canvas.width * W; }
+function unscaleY(y) { return y / canvas.height * H; }
+
+// ==================== API 调用 ====================
+async function fetchStores() {
+    const resp = await fetch("/api/stores");
+    currentStores = await resp.json();
+    return currentStores;
+}
+
+async function fetchStoreDetail(name) {
+    const resp = await fetch(`/api/store/${encodeURIComponent(name)}`);
+    return await resp.json();
+}
+
+async function searchStores(q) {
+    const resp = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+    return await resp.json();
+}
+
+async function findPath(floor, sx, sy, target, tx, ty) {
+    let url = `/api/pathfind?floor=${floor}&sx=${sx}&sy=${sy}&target=${target}`;
+    if (target === "" && tx !== undefined) {
+        url += `&tx=${tx}&ty=${ty}`;
+    }
+    const resp = await fetch(url);
+    return await resp.json();
+}
+
+async function addComment(storeName, score, comment) {
+    const resp = await fetch("/api/comment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ store_name: storeName, score: score, comment: comment })
+    });
+    return await resp.json();
+}
+
+// ==================== 绘制地图 ====================
+function drawFloorNames() {
+    ctx.fillStyle = "rgba(255,255,255,0.04)";
+    ctx.font = `${scaleY(60)}px Segoe UI`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("SKP MALL", scaleX(512), scaleY(80));
+}
+
+function drawCorridorsF1() {
+    ctx.strokeStyle = "rgba(200,200,200,0.3)";
+    ctx.lineWidth = scaleX(20);
+    ctx.lineCap = "round";
+    // 外框
+    ctx.beginPath();
+    ctx.moveTo(scaleX(135), scaleY(160));
+    ctx.lineTo(scaleX(750), scaleY(160));
+    ctx.lineTo(scaleX(750), scaleY(425));
+    ctx.lineTo(scaleX(135), scaleY(425));
+    ctx.closePath();
+    ctx.stroke();
+    // 中间竖线
+    ctx.beginPath();
+    ctx.moveTo(scaleX(320), scaleY(160));
+    ctx.lineTo(scaleX(320), scaleY(425));
+    ctx.stroke();
+    // 中间横线
+    ctx.beginPath();
+    ctx.moveTo(scaleX(320), scaleY(305));
+    ctx.lineTo(scaleX(750), scaleY(305));
+    ctx.stroke();
+}
+
+function drawCorridorsF2() {
+    ctx.strokeStyle = "rgba(200,200,200,0.3)";
+    ctx.lineWidth = scaleX(20);
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(scaleX(155), scaleY(130));
+    ctx.lineTo(scaleX(155), scaleY(440));
+    ctx.lineTo(scaleX(800), scaleY(440));
+    ctx.lineTo(scaleX(800), scaleY(130));
+    ctx.closePath();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(scaleX(600), scaleY(130));
+    ctx.lineTo(scaleX(600), scaleY(440));
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(scaleX(155), scaleY(285));
+    ctx.lineTo(scaleX(600), scaleY(285));
+    ctx.stroke();
+}
+
+function drawCorridorsF3() {
+    // 大圆圈
+    ctx.strokeStyle = "rgba(200,200,200,0.25)";
+    ctx.lineWidth = scaleX(80);
+    ctx.beginPath();
+    ctx.arc(scaleX(512), scaleY(300), scaleX(250), 0, Math.PI * 2);
+    ctx.stroke();
+}
+
+function drawStoreButton(store, highlight) {
+    const x = store.x, y = store.y;
+    const floor = store.floor;
+
+    if (floor === "F3") {
+        // F3 圆弧布局
+        const centerX = scaleX(512), centerY = scaleY(300), r = scaleX(250);
+        let angle;
+        if (store.name === "Sky Garden") {
+            ctx.fillStyle = "#7cfc00";
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, scaleX(100), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "#000";
+            ctx.font = `${scaleY(16)}px Segoe UI`;
+            ctx.textAlign = "center";
+            ctx.fillText("sky garden", centerX, centerY);
+            return;
+        }
+        const idx = store.y; // F3 用 y 存编号 1-8
+        const startAngle = (idx - 1) * 45 - 90;
+        const endAngle = idx * 45 - 90;
+        const midAngle = (startAngle + endAngle) / 2 * Math.PI / 180;
+        const labelX = centerX + r * 0.8 * Math.cos(midAngle);
+        const labelY = centerY + r * 0.8 * Math.sin(midAngle);
+
+        const colors = ["#ff5722","#ff9800","#ffc107","#81d8d0","#00bcd4","#2196f3","#9c27b0","#e91e63"];
+        ctx.fillStyle = colors[idx - 1] || "#999";
+        ctx.beginPath();
+        ctx.arc(labelX, labelY, scaleX(22), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.font = `${scaleY(10)}px Segoe UI`;
+        ctx.textAlign = "center";
+        ctx.fillText(store.name.substring(0, 8), labelX, labelY);
+        return;
+    }
+
+    // F1/F2 矩形按钮
+    const bw = 130, bh = 64;
+    const sx = scaleX(x), sy = scaleY(y);
+    const color = CAT_COLORS[store.category] || "#a24bc7";
+    ctx.fillStyle = color;
+    ctx.globalAlpha = highlight ? 1 : 0.85;
+    ctx.fillRect(sx - scaleX(bw), sy - scaleY(bh), scaleX(bw * 2), scaleY(bh * 2));
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = "#fff";
+    ctx.font = `${scaleY(13)}px Segoe UI`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const name = store.name.length > 15 ? store.name.substring(0, 15) + ".." : store.name;
+    ctx.fillText(name, sx, sy);
+}
+
+function drawClickPoint() {
+    if (!clickPoint) return;
+    ctx.fillStyle = "#ff0000";
+    ctx.beginPath();
+    ctx.arc(scaleX(clickPoint.x), scaleY(clickPoint.y), scaleX(10), 0, Math.PI * 2);
+    ctx.fill();
+}
+
+function drawPathLine() {
+    if (!pathLine || pathLine.length < 2) return;
+    ctx.strokeStyle = "#ff0000";
+    ctx.lineWidth = scaleX(8);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(scaleX(pathLine[0].x), scaleY(pathLine[0].y));
+    for (let i = 1; i < pathLine.length; i++) {
+        ctx.lineTo(scaleX(pathLine[i].x), scaleY(pathLine[i].y));
+    }
+    ctx.stroke();
+}
+
+function drawCrosshair() {
+    if (!clickPoint) return;
+    ctx.strokeStyle = "rgba(255,255,255,0.6)";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(scaleX(clickPoint.x), 0);
+    ctx.lineTo(scaleX(clickPoint.x), canvas.height);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, scaleY(clickPoint.y));
+    ctx.lineTo(canvas.width, scaleY(clickPoint.y));
+    ctx.stroke();
+    ctx.setLineDash([]);
+}
+
+function drawPoiMarkers() {
+    // F1 Poi
+    if (currentFloor === "F1") {
+        const pois = [
+            { x: 115, y: 100, label: "Serve1", color: "#1a5276" },
+            { x: 115, y: 240, label: "Lift1", color: "#000" },
+            { x: 115, y: 360, label: "Escape", color: "#0c0" },
+            { x: 315, y: 480, label: "Serve2", color: "#1a5276" },
+            { x: 645, y: 480, label: "Lift2", color: "#000" },
+        ];
+        pois.forEach(p => {
+            ctx.fillStyle = p.color;
+            ctx.fillRect(scaleX(p.x) - scaleX(35), scaleY(p.y) - scaleY(25), scaleX(70), scaleY(50));
+            ctx.fillStyle = "#fff";
+            ctx.font = `${scaleY(11)}px Segoe UI`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(p.label, scaleX(p.x), scaleY(p.y));
+        });
+    }
+    // F2 Poi
+    if (currentFloor === "F2") {
+        const pois = [
+            { x: 130, y: 190, label: "WC1", color: "#4682b4" },
+            { x: 130, y: 310, label: "Lift1", color: "#000" },
+            { x: 130, y: 420, label: "Esc1", color: "#0c0" },
+            { x: 820, y: 190, label: "Esc2", color: "#0c0" },
+            { x: 820, y: 310, label: "WC2", color: "#4682b4" },
+            { x: 820, y: 420, label: "Lift2", color: "#000" },
+        ];
+        pois.forEach(p => {
+            ctx.fillStyle = p.color;
+            ctx.fillRect(scaleX(p.x) - scaleX(30), scaleY(p.y) - scaleY(25), scaleX(60), scaleY(50));
+            ctx.fillStyle = "#fff";
+            ctx.font = `${scaleY(11)}px Segoe UI`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(p.label, scaleX(p.x), scaleY(p.y));
+        });
+    }
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = FLOOR_COLORS[currentFloor];
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    drawFloorNames();
+
+    if (currentFloor === "F1") drawCorridorsF1();
+    if (currentFloor === "F2") drawCorridorsF2();
+    if (currentFloor === "F3") drawCorridorsF3();
+
+    const floorStores = currentStores.filter(s => s.floor === currentFloor);
+    floorStores.forEach(s => drawStoreButton(s, s.name === currentDetailStore));
+
+    drawPoiMarkers();
+    drawPathLine();
+    drawCrosshair();
+    drawClickPoint();
+}
+
+async function refreshAndDraw() {
+    await fetchStores();
+    draw();
+    updateFloorBtns();
+    updateFindBtns();
+}
+
+// ==================== 楼层切换 ====================
+function updateFloorBtns() {
+    document.querySelectorAll("#floorBtns button").forEach(b => {
+        b.classList.toggle("active", b.dataset.floor === currentFloor);
+    });
+}
+
+document.getElementById("floorBtns").addEventListener("click", e => {
+    if (e.target.tagName === "BUTTON") {
+        currentFloor = e.target.dataset.floor;
+        clickPoint = null;
+        pathLine = null;
+        document.getElementById("pathInfo").style.display = "none";
+        refreshAndDraw();
+    }
+});
+
+// ==================== 地图点击 ====================
+canvas.addEventListener("click", e => {
+    if (currentFloor === "F0") return;
+    const rect = canvas.getBoundingClientRect();
+    const cx = unscaleX(e.clientX - rect.left);
+    const cy = unscaleY(e.clientY - rect.top);
+
+    // 检查是否点击了商铺
+    const floorStores = currentStores.filter(s => s.floor === currentFloor);
+    for (const store of floorStores) {
+        if (store.floor === "F3" && store.name !== "Sky Garden") continue;
+        const sx = store.x, sy = store.y;
+        const bw = 130, bh = 64;
+        if (Math.abs(cx - sx) < bw && Math.abs(cy - sy) < bh) {
+            showDetail(store.name);
+            return;
+        }
+    }
+    // Sky Garden F3
+    if (currentFloor === "F3") {
+        const centerX = 512, centerY = 300;
+        const dist = Math.sqrt((cx - centerX) ** 2 + (cy - centerY) ** 2);
+        if (dist < 100) {
+            const skyGarden = currentStores.find(s => s.name === "Sky Garden");
+            if (skyGarden) { showDetail(skyGarden.name); return; }
+        }
+    }
+
+    // 点击走廊设置起点
+    if (currentFloor === "F1" || currentFloor === "F2") {
+        fetch(`/api/check_path?floor=${currentFloor}&x=${Math.round(cx)}&y=${Math.round(cy)}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.on_path) {
+                    clickPoint = { x: Math.round(cx), y: Math.round(cy) };
+                    draw();
+                }
+            });
+    }
+});
+
+// ==================== 商铺详情 ====================
+async function showDetail(name) {
+    currentDetailStore = name;
+    const detail = await fetchStoreDetail(name);
+    document.getElementById("detailName").textContent = detail.name;
+    document.getElementById("detailMeta").textContent =
+        `${detail.floor} | ${detail.category} | Location: ${detail.x}, ${detail.y}`;
+    document.getElementById("detailDesc").textContent = detail.desc;
+    document.getElementById("starRating").textContent = detail.rating;
+    document.getElementById("starFill").style.width = (detail.rating / 5.0 * 100) + "%";
+
+    const commentsDiv = document.getElementById("detailComments");
+    commentsDiv.innerHTML = detail.comments.length === 0 ? "<i>No comments yet.</i>" : "";
+    detail.comments.forEach(c => {
+        const div = document.createElement("div");
+        div.className = "comment";
+        div.textContent = `${c.name} [${c.score}] ${c.comment}`;
+        commentsDiv.appendChild(div);
+    });
+
+    document.getElementById("reviewScore").value = 5.0;
+    document.getElementById("reviewScoreLabel").textContent = "5.0";
+    document.getElementById("reviewText").value = "";
+
+    document.getElementById("detailOverlay").style.display = "block";
+    draw();
+}
+
+document.querySelector("#detailOverlay .close").addEventListener("click", () => {
+    document.getElementById("detailOverlay").style.display = "none";
+    currentDetailStore = "";
+    draw();
+});
+
+document.getElementById("reviewScore").addEventListener("input", function() {
+    document.getElementById("reviewScoreLabel").textContent = parseFloat(this.value).toFixed(1);
+});
+
+document.getElementById("submitReview").addEventListener("click", async () => {
+    const score = parseFloat(document.getElementById("reviewScore").value);
+    const comment = document.getElementById("reviewText").value.trim();
+    if (!currentDetailStore || !comment) return;
+    await addComment(currentDetailStore, score, comment);
+    showDetail(currentDetailStore);
+});
+
+// ==================== 搜索 ====================
+document.getElementById("searchBtn").addEventListener("click", () => {
+    document.getElementById("searchOverlay").style.display = "block";
+    document.getElementById("searchInput").value = "";
+    document.getElementById("searchResults").innerHTML = "";
+    document.getElementById("searchInput").focus();
+});
+
+document.querySelector("#searchOverlay .close").addEventListener("click", () => {
+    document.getElementById("searchOverlay").style.display = "none";
+});
+
+document.getElementById("searchInput").addEventListener("input", async function() {
+    const q = this.value;
+    const results = await searchStores(q);
+    const div = document.getElementById("searchResults");
+    div.innerHTML = results.map(r =>
+        `<div class="item" data-name="${r.name}">${r.name} (${r.floor} | ${r.category} | ${r.rating})</div>`
+    ).join("");
+});
+
+document.getElementById("searchResults").addEventListener("click", e => {
+    const item = e.target.closest(".item");
+    if (!item) return;
+    const name = item.dataset.name;
+    document.getElementById("searchOverlay").style.display = "none";
+    currentFloor = currentStores.find(s => s.name === name)?.floor || currentFloor;
+    refreshAndDraw().then(() => showDetail(name));
+});
+
+// ==================== 分类排序 ====================
+document.getElementById("sortBtn").addEventListener("click", () => {
+    document.getElementById("sortOverlay").style.display = "block";
+    const catBtns = document.querySelector("#sortOverlay .catBtns");
+    catBtns.innerHTML = CATEGORIES.map(c =>
+        `<button data-cat="${c}">${c}</button>`
+    ).join("");
+    showCategoryStores(CATEGORIES[0]);
+});
+
+document.querySelector("#sortOverlay .close").addEventListener("click", () => {
+    document.getElementById("sortOverlay").style.display = "none";
+});
+
+document.querySelector("#sortOverlay .catBtns").addEventListener("click", e => {
+    if (e.target.tagName === "BUTTON") {
+        showCategoryStores(e.target.dataset.cat);
+    }
+});
+
+function showCategoryStores(cat) {
+    const stores = currentStores.filter(s => s.category === cat);
+    const div = document.getElementById("sortResults");
+    div.innerHTML = stores.map(s =>
+        `<div class="item" data-name="${s.name}">${s.name} (${s.floor} | rating: ${s.rating})</div>`
+    ).join("");
+}
+
+document.getElementById("sortResults").addEventListener("click", e => {
+    const item = e.target.closest(".item");
+    if (!item) return;
+    const name = item.dataset.name;
+    document.getElementById("sortOverlay").style.display = "none";
+    currentFloor = currentStores.find(s => s.name === name)?.floor || currentFloor;
+    refreshAndDraw().then(() => showDetail(name));
+});
+
+// ==================== 找路功能 ====================
+function updateFindBtns() {
+    const div = document.getElementById("findBtns");
+    const findWC = document.getElementById("findWC");
+    const findServe = document.getElementById("findServe");
+    if (currentFloor === "F1") {
+        div.style.display = "flex";
+        findServe.style.display = "inline";
+        findWC.style.display = "none";
+    } else if (currentFloor === "F2") {
+        div.style.display = "flex";
+        findServe.style.display = "none";
+        findWC.style.display = "inline";
+    } else {
+        div.style.display = "none";
+    }
+}
+
+document.getElementById("findBtns").addEventListener("click", async e => {
+    if (e.target.tagName !== "BUTTON") return;
+    if (!clickPoint) { alert("Please click a point on the corridor first!"); return; }
+    const target = e.target.dataset.target;
+    const result = await findPath(currentFloor, clickPoint.x, clickPoint.y, target);
+    if (result.path) {
+        pathLine = result.path;
+        document.getElementById("pathInfo").style.display = "block";
+        document.getElementById("pathInfo").textContent = (result.message ? result.message + " | " : "") + result.directions;
+        draw();
+    }
+});
+
+// ==================== 初始化 ====================
+fetchStores().then(() => {
+    draw();
+    updateFloorBtns();
+});
+</script>
+</body>
+</html>
