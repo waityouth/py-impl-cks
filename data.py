@@ -359,7 +359,7 @@ STORES = [
     },
     {
         "name": "Hermes", "desc": "Hermes, established in 1837 in Paris, started as a harness workshop and evolved into a pinnacle of French luxury, famous for its handcrafted Kelly and Birkin bags.",
-        "img_path": "Hermes.bin", "btn_color": "#E65100", "comments": hermes_comments,
+        "img_path": "Dior.bin", "btn_color": "#E65100", "comments": hermes_comments,
         "btn_x": 390, "btn_y": 65, "btn_w": 130, "btn_h": 64, "x": 455, "y": 97, "floor": "F1", "category": "Luxury",
     },
     {
@@ -419,7 +419,7 @@ STORES = [
     },
     {
         "name": "Premium Selected", "desc": "Premium Selected is a multi-brand boutique offering a curated selection of avant-garde and established high-end fashion, accessories, and lifestyle products.",
-        "img_path": "Premium_Selected.bin", "btn_color": "#2C3E50", "comments": premium_comments,
+        "img_path": "Carbon_Star.bin", "btn_color": "#2C3E50", "comments": premium_comments,
         "btn_x": 420, "btn_y": 440, "btn_w": 190, "btn_h": 120, "x": 515, "y": 500, "floor": "F1", "category": "Lifestyle",
     },
     # ========== F2 层 ==========
@@ -440,7 +440,7 @@ STORES = [
     },
     {
         "name": "Prada F2", "desc": "Prada, founded in 1913 in Milan, is an Italian luxury fashion house known for its understated style, innovative use of nylon, and intellectual approach to fashion.",
-        "img_path": "Prada_F2.bin", "btn_color": "#FF8C00", "comments": prada_f2_comments,
+        "img_path": "Prada.bin", "btn_color": "#FF8C00", "comments": prada_f2_comments,
         "btn_x": 180, "btn_y": 150, "btn_w": 60, "btn_h": 120, "x": 210, "y": 210, "floor": "F2", "category": "Luxury",
     },
     {
@@ -450,12 +450,12 @@ STORES = [
     },
     {
         "name": "Costa F2", "desc": "Costa Coffee, founded in London in 1971 by Italian brothers, is a global coffeehouse chain renowned for its signature Mocha Italia blend and handcrafted coffee.",
-        "img_path": "Costa_F2.bin", "btn_color": "#A0522D", "comments": costa_f2_comments,
+        "img_path": "Costa_1.bin", "btn_color": "#A0522D", "comments": costa_f2_comments,
         "btn_x": 525, "btn_y": 460, "btn_w": 350, "btn_h": 100, "x": 700, "y": 510, "floor": "F2", "category": "Food",
     },
     {
         "name": "SKP Select Main", "desc": "SKP Select is a high-end multi-brand concept store by SKP, curating a unique mix of international and niche luxury fashion, accessories, and lifestyle goods.",
-        "img_path": "SKP_Select_Main.bin", "btn_color": "#CC0000", "comments": skp_main_comments,
+        "img_path": "Carbon_Star.bin", "btn_color": "#CC0000", "comments": skp_main_comments,
         "btn_x": 280, "btn_y": 300, "btn_w": 300, "btn_h": 120, "x": 430, "y": 360, "floor": "F2", "category": "Lifestyle",
     },
     {
@@ -465,7 +465,7 @@ STORES = [
     },
     {
         "name": "Boss", "desc": "Boss, founded in 1924, is a German luxury fashion house known for its sophisticated, contemporary tailoring and high-quality ready-to-wear clothing for men and women.",
-        "img_path": "Boss.bin", "btn_color": "#A9B1BC", "comments": boss_comments,
+        "img_path": "BOSS.bin", "btn_color": "#A9B1BC", "comments": boss_comments,
         "btn_x": 720, "btn_y": 150, "btn_w": 60, "btn_h": 270, "x": 750, "y": 285, "floor": "F2", "category": "Luxury",
     },
     {
@@ -475,7 +475,7 @@ STORES = [
     },
     {
         "name": "Ecco", "desc": "ECCO, a Danish shoe manufacturer founded in 1963, is known for its comfortable, Scandinavian-design footwear and innovative leather technology.",
-        "img_path": "Ecco.bin", "btn_color": "#4682B4", "comments": ecco_comments,
+        "img_path": "ECCO.bin", "btn_color": "#4682B4", "comments": ecco_comments,
         "btn_x": 180, "btn_y": 300, "btn_w": 60, "btn_h": 120, "x": 210, "y": 360, "floor": "F2", "category": "Lifestyle",
     },
     {
@@ -526,7 +526,7 @@ STORES = [
     },
     {
         "name": "Sky Garden", "desc": "Sky Garden - A breathtaking rooftop garden cafe with panoramic views and light refreshments.",
-        "img_path": "SkyGarden.bin", "btn_color": "#7CFC00", "comments": skygarden_comments,
+        "img_path": "Carbon_Star.bin", "btn_color": "#7CFC00", "comments": skygarden_comments,
         "btn_x": 0, "btn_y": 0, "btn_w": 220, "btn_h": 220, "x": -1, "y": 0, "floor": "F3", "category": "Food",
     },
 ]
