@@ -333,21 +333,20 @@ function drawF0(){
   let cats=Object.entries(catCol);
 
   // 合并的灰色方块
-  ctx.fillStyle="rgba(255,255,255,0.05)";ctx.fillRect(80,440,864,110);
-  ctx.fillStyle="#ccc";ctx.font="13px Segoe UI";ctx.fillText("Categories:",95,462);
+  ctx.fillStyle="rgba(255,255,255,0.05)";ctx.fillRect(80,440,864,135);
+  ctx.fillStyle="#ccc";ctx.font="13px Segoe UI";ctx.fillText("Categories:",95,465);
 
   // 6 个分类横向排列
-  let cx=95;
+  let cx=180;
   cats.forEach(([c,col])=>{
     ctx.fillStyle=col;ctx.fillRect(cx,478,10,10);
-    ctx.fillStyle="#ccc";ctx.font="12px Segoe UI";ctx.fillText(c,cx+12,487);
-    ctx.fillStyle="rgba(255,255,255,0.08)";ctx.fillRect(cx,470,c.length*7+20,22);
-    cx+=c.length*7+30;
+    ctx.fillStyle="#ccc";ctx.font="12px Segoe UI";ctx.fillText(c,cx+16,488);
+    cx+=c.length*8+40;
   });
 
   // 操作提示
   ctx.font="12px Segoe UI";ctx.fillStyle="#aaa";
-  ctx.fillText("Click a floor card to enter | Search stores by name | Sort by category | Click stores to see details, ratings & reviews",95,522);
+  ctx.fillText("Click a floor card to enter | Search stores by name | Sort by category | Click stores to see details, ratings & reviews",95,530);
   ctx.textAlign="center";
 }
 
