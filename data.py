@@ -526,7 +526,7 @@ STORES = [
     },
     {
         "name": "Sky Garden", "desc": "Sky Garden - A breathtaking rooftop garden cafe with panoramic views and light refreshments.",
-        "img_path": "Carbon_Star.bin", "btn_color": "#7CFC00", "comments": skygarden_comments,
+        "img_path": "SkyGarden.png", "btn_color": "#7CFC00", "comments": skygarden_comments,
         "btn_x": 0, "btn_y": 0, "btn_w": 220, "btn_h": 220, "x": -1, "y": 0, "floor": "F3", "category": "Food",
     },
 ]
