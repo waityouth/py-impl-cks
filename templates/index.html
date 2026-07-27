@@ -334,13 +334,16 @@ function drawF0(){
 
   // 合并的灰色方块
   ctx.fillStyle="rgba(255,255,255,0.05)";ctx.fillRect(80,440,864,135);
+
+  // "Categories:" 标签
   ctx.fillStyle="#ccc";ctx.font="13px Segoe UI";ctx.fillText("Categories:",95,465);
 
   // 6 个分类横向排列
-  let cx=180;
+  let cx=195;
+  let cy=478;
   cats.forEach(([c,col])=>{
-    ctx.fillStyle=col;ctx.fillRect(cx,478,10,10);
-    ctx.fillStyle="#ccc";ctx.font="12px Segoe UI";ctx.fillText(c,cx+16,488);
+    ctx.fillStyle=col;ctx.fillRect(cx,cy,10,10);
+    ctx.fillStyle="#ccc";ctx.font="12px Segoe UI";ctx.fillText(c,cx+16,cy+10);
     cx+=c.length*8+40;
   });
 
