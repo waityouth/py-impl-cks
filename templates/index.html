@@ -76,7 +76,8 @@ canvas{display:block}
     <div class="meta" id="detailMeta"></div>
     <div class="img-area"><img id="detailImg" src="" alt=""></div>
     <div class="info"><div class="desc" id="detailDesc"></div>
-    <div class="stars-row"><span>Rating:</span><div class="star-bar" id="detailStarBar"><div class="star-fill" id="detailStarFill"></div></div><span id="detailStarRating">0.0</span></div></div>
+    <div class="stars-row"><span>Rating:</span><div class="star-bar" id="detailStarBar"><div class="star-fill" id="detailStarFill"></div></div><span id="detailStarRating">0.0</span></div>
+    <div class="comments" id="detailComments"></div></div>
     <div style="clear:both"></div>
     <button style="position:absolute;left:20px;bottom:16px;background:#27ae60;color:#fff;border:none;border-radius:6px;padding:8px 24px;cursor:pointer;font-size:14px" id="detailWriteBtn">write</button>
   </div>
@@ -90,7 +91,6 @@ canvas{display:block}
       <div class="slide-bar" id="slideBar"><div class="slide-fill" id="slideFill" style="width:100%"><div class="slide-fill-inner"></div></div></div>
       <span id="slideRating">5.0</span>
     </div>
-    <div class="comment-list" id="commentList"></div>
     <div class="write-row">
       <input type="text" placeholder="Write a comment..." id="reviewText" maxlength="60">
       <button id="submitReview">Submit</button>
@@ -362,7 +362,7 @@ async function refreshAndDraw(){await fetchStores();draw()}
 // ===== 渲染详情 & 评论 =====
 async function renderDetail(){
   let d=currentStores.find(s=>s.name===currentDetailStore);
-  if(!d||!d.rating){d=await storeDetail(currentDetailStore)}
+  if(!d||!d.comments||d.comments.length===0){d=await storeDetail(currentDetailStore)}
   document.getElementById("detailName").textContent=d.name;
   document.getElementById("detailMeta").textContent=`${d.floor} | ${d.category} | Location: ${d.x}, ${d.y}`;
   document.getElementById("detailDesc").textContent=d.desc;
@@ -372,13 +372,15 @@ async function renderDetail(){
   let imgPath=d.img_path||"";
   let pngName=imgPath.replace(".bin",".png");
   document.getElementById("detailImg").src=`/static/img/${pngName}`;
+
+  let cmt=d.comments||[];
+  let dc=document.getElementById("detailComments");
+  dc.innerHTML=cmt.length===0?"<i style='color:#aaa'>No comments yet.</i>":cmt.map(c=>`<div class="comment">${c.name} [${c.score}] ${c.comment}</div>`).join("");
 }
 
 async function renderRating(){
   let d=await storeDetail(currentDetailStore);
-  document.getElementById("ratingTitle").textContent=d.name+" - Comments";
-  let cmt=d.comments||[];
-  document.getElementById("commentList").innerHTML=cmt.length===0?"<i style='color:#aaa'>No comments yet.</i>":cmt.map(c=>`<div class="comment">${c.name} [${c.score}] ${c.comment}</div>`).join("");
+  document.getElementById("ratingTitle").textContent=d.name+" - Write Review";
   document.getElementById("slideFill").style.width="100%";
   document.getElementById("slideRating").textContent="5.0";
   document.getElementById("reviewText").value="";
