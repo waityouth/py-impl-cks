@@ -502,6 +502,20 @@ canvas.addEventListener("click",async e=>{
     if(cy>=475&&cy<=525){document.getElementById("searchOverlay").style.display="block";document.getElementById("searchInput").value="";document.getElementById("searchResults").innerHTML="";document.getElementById("searchInput").focus();document.getElementById("sortOverlay").style.display="none";return}
     if(cy>=550&&cy<=600){openSort();document.getElementById("searchOverlay").style.display="none";return}
     if(cy>=270&&cy<=320)switchFloor("F1");if(cy>=335&&cy<=385)switchFloor("F2");if(cy>=400&&cy<=450)switchFloor("F3");
+    // 找路按钮 (F1/F2)
+    if((currentFloor==="F1"||currentFloor==="F2")&&clickPoint){
+      let tgt=null;
+      if(cy>=65&&cy<=115)tgt=currentFloor==="F1"?"serve":"wc";
+      else if(cy>=130&&cy<=180)tgt="escape";
+      else if(cy>=195&&cy<=245)tgt="lift";
+      if(tgt){
+        let r=await pathfind(currentFloor,clickPoint.x,clickPoint.y,tgt);
+        if(r.path){pathLine=r.path;
+          document.getElementById("pathInfo").style.display="block";
+          document.getElementById("pathInfo").textContent=(r.message?r.message+" | ":"")+r.directions;
+          draw()}
+      }
+    }
     return;
   }
   if(cx>=10&&cx<=60&&cy>=550&&cy<=600){switchFloor("F0");return}
@@ -524,22 +538,6 @@ canvas.addEventListener("click",async e=>{
     let bx=s.btn_x,by=s.btn_y,bw=s.btn_w,bh=s.btn_h;
     if(bw<=0||bh<=0)continue;
     if(cx>=bx&&cx<=bx+bw&&cy>=by&&cy<=by+bh){navToDetail(s.name);return}
-  }
-
-  // 找路按钮
-  if((currentFloor==="F1"||currentFloor==="F2")&&cx>=950&&cx<=1000){
-    let tgt=null;
-    if(cy>=65&&cy<=115)tgt=currentFloor==="F1"?"serve":"wc";
-    else if(cy>=130&&cy<=180)tgt="escape";
-    else if(cy>=195&&cy<=245)tgt="lift";
-    if(tgt&&clickPoint){
-      let r=await pathfind(currentFloor,clickPoint.x,clickPoint.y,tgt);
-      if(r.path){pathLine=r.path;
-        document.getElementById("pathInfo").style.display="block";
-        document.getElementById("pathInfo").textContent=(r.message?r.message+" | ":"")+r.directions;
-        draw()}
-    }
-    return;
   }
 
   // 走廊点击
