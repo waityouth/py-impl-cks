@@ -404,10 +404,6 @@ function updateSlide(e){
   currentSlideScore=sc;
 }
 
-document.getElementById("reviewScore").addEventListener("input",function(){
-  document.getElementById("scoreLabel").textContent=parseFloat(this.value).toFixed(1);
-});
-
 document.getElementById("submitReview").addEventListener("click",async()=>{
   let txt=document.getElementById("reviewText").value.trim();
   if(!currentDetailStore||!txt)return;
