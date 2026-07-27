@@ -78,8 +78,6 @@ canvas{display:block}
     <div class="info"><div class="desc" id="detailDesc"></div>
     <div class="stars-row"><span>Rating:</span><div class="star-bar" id="detailStarBar"><div class="star-fill" id="detailStarFill"></div></div><span id="detailStarRating">0.0</span></div></div>
     <div style="clear:both"></div>
-    <div class="comments" id="detailComments"></div>
-    <button style="position:absolute;right:100px;bottom:10px;background:#a24bc7;color:#fff;border:none;border-radius:6px;padding:6px 16px;cursor:pointer" id="detailCommentsBtn">detail comments</button>
   </div>
 
   <!-- rating_screen -->
@@ -93,8 +91,6 @@ canvas{display:block}
     </div>
     <div class="comment-list" id="commentList"></div>
     <div class="write-row">
-      <input type="range" min="0.5" max="5" step="0.5" value="5" id="reviewScore">
-      <span id="scoreLabel">5.0</span>
       <input type="text" placeholder="Write a comment..." id="reviewText" maxlength="60">
       <button id="submitReview">Submit</button>
     </div>
@@ -109,6 +105,7 @@ let currentFloor="F1";
 let currentDetailStore="";
 let clickPoint=null;
 let pathLine=null;
+let currentSlideScore=5.0;
 
 // 页面返回栈（严格复刻 C 代码 back_screen_records + back_counts）
 let backStack=[];
@@ -374,10 +371,6 @@ async function renderDetail(){
   let imgPath=d.img_path||"";
   let pngName=imgPath.replace(".bin",".png");
   document.getElementById("detailImg").src=`/static/img/${pngName}`;
-
-  let cmt=d.comments||[];
-  let dc=document.getElementById("detailComments");
-  dc.innerHTML=cmt.length===0?"<i style='color:#aaa'>No comments yet.</i>":cmt.map(c=>`<div class="comment">${c.name} [${c.score}] ${c.comment}</div>`).join("");
 }
 
 async function renderRating(){
@@ -387,8 +380,8 @@ async function renderRating(){
   document.getElementById("commentList").innerHTML=cmt.length===0?"<i style='color:#aaa'>No comments yet.</i>":cmt.map(c=>`<div class="comment">${c.name} [${c.score}] ${c.comment}</div>`).join("");
   document.getElementById("slideFill").style.width="100%";
   document.getElementById("slideRating").textContent="5.0";
-  document.getElementById("reviewScore").value=5;document.getElementById("scoreLabel").textContent="5.0";
   document.getElementById("reviewText").value="";
+  currentSlideScore=5.0;
 }
 
 // ===== 事件处理 =====
@@ -408,7 +401,7 @@ function updateSlide(e){
   for(let i=0;i<thresholds.length;i++){if(x<=thresholds[i]){w=thresholds[i];sc=scores[i];break}}
   document.getElementById("slideFill").style.width=(w/290*100)+"%";
   document.getElementById("slideRating").textContent=sc.toFixed(1);
-  document.getElementById("reviewScore").value=sc;document.getElementById("scoreLabel").textContent=sc.toFixed(1);
+  currentSlideScore=sc;
 }
 
 document.getElementById("reviewScore").addEventListener("input",function(){
@@ -416,11 +409,9 @@ document.getElementById("reviewScore").addEventListener("input",function(){
 });
 
 document.getElementById("submitReview").addEventListener("click",async()=>{
-  let sc=parseFloat(document.getElementById("reviewScore").value);
   let txt=document.getElementById("reviewText").value.trim();
   if(!currentDetailStore||!txt)return;
-  let r=await addComment(currentDetailStore,sc,txt);
-  // 刷新
+  let r=await addComment(currentDetailStore,currentSlideScore,txt);
   await fetchStores();renderRating();renderDetail();
 });
 
@@ -432,9 +423,6 @@ document.querySelector("#ratingOverlay .close").addEventListener("click",()=>{
   goBack();
 });
 document.getElementById("detailStarBar").addEventListener("click",()=>{
-  navToRating();
-});
-document.getElementById("detailCommentsBtn").addEventListener("click",()=>{
   navToRating();
 });
 
