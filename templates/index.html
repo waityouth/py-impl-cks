@@ -78,6 +78,7 @@ canvas{display:block}
     <div class="info"><div class="desc" id="detailDesc"></div>
     <div class="stars-row"><span>Rating:</span><div class="star-bar" id="detailStarBar"><div class="star-fill" id="detailStarFill"></div></div><span id="detailStarRating">0.0</span></div></div>
     <div style="clear:both"></div>
+    <button style="position:absolute;left:20px;bottom:16px;background:#27ae60;color:#fff;border:none;border-radius:6px;padding:8px 24px;cursor:pointer;font-size:14px" id="detailWriteBtn">write</button>
   </div>
 
   <!-- rating_screen -->
@@ -419,6 +420,9 @@ document.querySelector("#ratingOverlay .close").addEventListener("click",()=>{
   goBack();
 });
 document.getElementById("detailStarBar").addEventListener("click",()=>{
+  navToRating();
+});
+document.getElementById("detailWriteBtn").addEventListener("click",()=>{
   navToRating();
 });
 
