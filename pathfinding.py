@@ -392,3 +392,53 @@ def is_on_path_f2(x, y):
     if 285 - T <= y <= 285 + T and 155 <= x <= 600:
         return True
     return False
+
+
+# ==================== 途经点寻路 ====================
+
+def find_path_with_waypoints_f1(sx, sy, tx, ty, waypoints):
+    """F1层途经点寻路，依次拼接多段 Dijkstra 结果"""
+    all_pts = []
+    all_directions = []
+
+    points_seq = [(sx, sy)] + [(wp["x"], wp["y"]) for wp in waypoints] + [(tx, ty)]
+
+    for i in range(len(points_seq) - 1):
+        seg_sx, seg_sy = points_seq[i]
+        seg_tx, seg_ty = points_seq[i + 1]
+
+        pts, directions = find_path_f1(seg_sx, seg_sy, seg_tx, seg_ty)
+
+        if not all_pts:
+            all_pts.extend(pts)
+        else:
+            all_pts.extend(pts[1:])
+
+        if directions:
+            all_directions.append(directions)
+
+    return all_pts, "; ".join(all_directions)
+
+
+def find_path_with_waypoints_f2(sx, sy, tx, ty, waypoints):
+    """F2层途经点寻路，依次拼接多段 Dijkstra 结果"""
+    all_pts = []
+    all_directions = []
+
+    points_seq = [(sx, sy)] + [(wp["x"], wp["y"]) for wp in waypoints] + [(tx, ty)]
+
+    for i in range(len(points_seq) - 1):
+        seg_sx, seg_sy = points_seq[i]
+        seg_tx, seg_ty = points_seq[i + 1]
+
+        pts, directions = find_path_f2(seg_sx, seg_sy, seg_tx, seg_ty)
+
+        if not all_pts:
+            all_pts.extend(pts)
+        else:
+            all_pts.extend(pts[1:])
+
+        if directions:
+            all_directions.append(directions)
+
+    return all_pts, "; ".join(all_directions)

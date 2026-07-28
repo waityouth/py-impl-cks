@@ -10,6 +10,7 @@ from flask import Flask, render_template, request, jsonify
 from data import STORES, CATEGORIES, FLOORS
 from pathfinding import (
     find_path_f1, find_path_f2,
+    find_path_with_waypoints_f1, find_path_with_waypoints_f2,
     find_nearest_serve_f1, find_nearest_escape_f1, find_nearest_lift_f1,
     find_nearest_wc_f2, find_nearest_escape_f2, find_nearest_lift_f2,
     is_on_path_f1, is_on_path_f2,
@@ -157,6 +158,14 @@ def api_pathfind():
 
     target = request.args.get("target", "")
 
+    waypoints_raw = request.args.get("waypoints", "")
+    waypoints = []
+    if waypoints_raw:
+        try:
+            waypoints = json.loads(waypoints_raw)
+        except json.JSONDecodeError:
+            return jsonify({"error": "invalid waypoints format"}), 400
+
     if floor == "F1":
         if target == "serve":
             dest, msg = find_nearest_serve_f1(sx, sy)
@@ -172,11 +181,9 @@ def api_pathfind():
                 return jsonify({"error": "invalid target coordinates"}), 400
             dest = {"x": tx, "y": ty}
             msg = ""
-            # Check that dest is a store's coordinates
-            pass
 
-        if target in ("serve", "escape", "lift"):
-            pts, directions = find_path_f1(sx, sy, dest["x"], dest["y"])
+        if waypoints:
+            pts, directions = find_path_with_waypoints_f1(sx, sy, dest["x"], dest["y"], waypoints)
         else:
             pts, directions = find_path_f1(sx, sy, dest["x"], dest["y"])
         return jsonify({
@@ -201,7 +208,10 @@ def api_pathfind():
             dest = {"x": tx, "y": ty}
             msg = ""
 
-        pts, directions = find_path_f2(sx, sy, dest["x"], dest["y"])
+        if waypoints:
+            pts, directions = find_path_with_waypoints_f2(sx, sy, dest["x"], dest["y"], waypoints)
+        else:
+            pts, directions = find_path_f2(sx, sy, dest["x"], dest["y"])
         return jsonify({
             "path": pts,
             "directions": directions,

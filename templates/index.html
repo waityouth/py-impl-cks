@@ -107,6 +107,10 @@ let currentDetailStore="";
 let clickPoint=null;
 let pathLine=null;
 let currentSlideScore=5.0;
+let waypoints=[];
+let draggingWaypointIndex=-1;
+let waypointDragMoved=false;
+let currentTarget=null;
 
 // 页面返回栈（严格复刻 C 代码 back_screen_records + back_counts）
 let backStack=[];
@@ -130,7 +134,47 @@ const ctx=canvas.getContext("2d");
 async function fetchStores(){const r=await fetch("/api/stores");currentStores=await r.json();return currentStores}
 async function storeDetail(name){const r=await fetch(`/api/store/${encodeURIComponent(name)}`);return await r.json()}
 async function searchStores(q){const r=await fetch(`/api/search?q=${encodeURIComponent(q)}`);return await r.json()}
-async function pathfind(floor,sx,sy,target){const r=await fetch(`/api/pathfind?floor=${floor}&sx=${sx}&sy=${sy}&target=${target}`);return await r.json()}
+async function pathfind(floor,sx,sy,target,wps){let params=`floor=${floor}&sx=${sx}&sy=${sy}&target=${target}`;if(wps&&wps.length)params+=`&waypoints=${encodeURIComponent(JSON.stringify(wps))}`;const r=await fetch(`/api/pathfind?${params}`);return await r.json()}
+
+function hitPathLine(cx,cy){if(!pathLine||pathLine.length<2)return null;const TH=20;let best=null,bestD=Infinity;for(let i=0;i<pathLine.length-1;i++){let a=pathLine[i],b=pathLine[i+1];let dx=b.x-a.x,dy=b.y-a.y,len2=dx*dx+dy*dy;if(len2===0)continue;let t=((cx-a.x)*dx+(cy-a.y)*dy)/len2;t=Math.max(0,Math.min(1,t));let px=a.x+t*dx,py=a.y+t*dy;let dist=Math.sqrt((cx-px)**2+(cy-py)**2);if(dist<TH&&dist<bestD){bestD=dist;best={x:Math.round(px),y:Math.round(py)}}}return best}
+function snapToCorridor(floor,x,y){
+  if(floor==="F1"){
+    let VX=[135,320,750],HY=[160,305,425];
+    let bx=VX.reduce((a,b)=>Math.abs(x-a)<Math.abs(x-b)?a:b);
+    let by=HY.reduce((a,b)=>Math.abs(y-a)<Math.abs(y-b)?a:b);
+    let dx=Math.abs(x-bx),dy=Math.abs(y-by);
+    let rx=dx<dy?bx:x,ry=dx<dy?y:by;
+    if(rx<135)rx=135;if(rx>750)rx=750;
+    if(ry<160)ry=160;if(ry>425)ry=425;
+    return{x:Math.round(rx),y:Math.round(ry)};
+  }else if(floor==="F2"){
+    let VX=[155,600,800],HY=[130,285,440];
+    let bx=VX.reduce((a,b)=>Math.abs(x-a)<Math.abs(x-b)?a:b);
+    let by=HY.reduce((a,b)=>Math.abs(y-a)<Math.abs(y-b)?a:b);
+    let dx=Math.abs(x-bx),dy=Math.abs(y-by);
+    let rx=dx<dy?bx:x,ry=dx<dy?y:by;
+    if(rx<155)rx=155;if(rx>800)rx=800;
+    if(ry<130)ry=130;if(ry>440)ry=440;
+    return{x:Math.round(rx),y:Math.round(ry)};
+  }
+  return{x:Math.round(x),y:Math.round(y)};
+}
+function hitWaypoint(cx,cy){
+  if(!waypoints||waypoints.length===0)return -1;
+  let TH=12;
+  for(let i=waypoints.length-1;i>=0;i--){
+    let wp=waypoints[i],d=Math.sqrt((cx-wp.x)**2+(cy-wp.y)**2);
+    if(d<TH)return i;
+  }
+  return -1;
+}
+async function recalculatePath(){
+  let r=await pathfind(currentFloor,clickPoint.x,clickPoint.y,currentTarget,waypoints);
+  if(r.path){pathLine=r.path;
+    document.getElementById("pathInfo").style.display="block";
+    document.getElementById("pathInfo").textContent=(r.message?r.message+" | ":"")+r.directions;}
+  draw();
+}
 async function addComment(name,sc,cm){const r=await fetch("/api/comment",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({store_name:name,score:sc,comment:cm})});return await r.json()}
 
 // ===== 页面切换 =====
@@ -158,10 +202,10 @@ function navToRating(){
 function goBack(){
   let p=backPop();
   if(p==="detail"){gotoPage("detail");renderDetail();draw()}
-  else{currentFloor=p;clickPoint=null;pathLine=null;gotoPage("page");document.getElementById("pathInfo").style.display="none";refreshAndDraw()}
+  else{currentFloor=p;clickPoint=null;pathLine=null;waypoints=[];draggingWaypointIndex=-1;waypointDragMoved=false;currentTarget=null;gotoPage("page");document.getElementById("pathInfo").style.display="none";refreshAndDraw()}
 }
 function switchFloor(f){
-  currentFloor=f;clickPoint=null;pathLine=null;
+  currentFloor=f;clickPoint=null;pathLine=null;waypoints=[];draggingWaypointIndex=-1;waypointDragMoved=false;currentTarget=null;
   backInit();
   gotoPage("page");
   document.getElementById("pathInfo").style.display="none";
@@ -287,12 +331,54 @@ function drawClickPoint(){
   ctx.beginPath();ctx.arc(clickPoint.x,clickPoint.y,10,0,Math.PI*2);ctx.fill();
 }
 
+function drawWaypoints(){
+  if(!waypoints||waypoints.length===0)return;
+  waypoints.forEach((wp,i)=>{
+    ctx.fillStyle="#007BFF";
+    ctx.beginPath();
+    ctx.moveTo(wp.x,wp.y-9);
+    ctx.lineTo(wp.x+9,wp.y);
+    ctx.lineTo(wp.x,wp.y+9);
+    ctx.lineTo(wp.x-9,wp.y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle="#fff";ctx.lineWidth=1.5;
+    ctx.stroke();
+    ctx.fillStyle="#fff";ctx.font="bold 10px Segoe UI";ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.fillText(i+1,wp.x,wp.y);
+  });
+}
+
 function drawPathLine(){
   if(!pathLine||pathLine.length<2)return;
-  ctx.strokeStyle="#FF0000";ctx.lineWidth=8;ctx.lineCap="round";ctx.lineJoin="round";
-  ctx.beginPath();ctx.moveTo(pathLine[0].x,pathLine[0].y);
-  for(let i=1;i<pathLine.length;i++)ctx.lineTo(pathLine[i].x,pathLine[i].y);
-  ctx.stroke();
+  if(!waypoints||waypoints.length===0){
+    ctx.strokeStyle="#FF0000";ctx.lineWidth=8;ctx.lineCap="round";ctx.lineJoin="round";
+    ctx.beginPath();ctx.moveTo(pathLine[0].x,pathLine[0].y);
+    for(let i=1;i<pathLine.length;i++)ctx.lineTo(pathLine[i].x,pathLine[i].y);
+    ctx.stroke();return;
+  }
+  let colors=["#FF0000","#00BFFF","#FFD700","#FF69B4","#7FFF00","#FF8C00"];
+  let splits=[];
+  waypoints.forEach(wp=>{
+    let best=0,bestD=Infinity;
+    for(let i=0;i<pathLine.length;i++){
+      let d=Math.abs(pathLine[i].x-wp.x)+Math.abs(pathLine[i].y-wp.y);
+      if(d<bestD){bestD=d;best=i;}
+    }
+    splits.push(best);
+  });
+  splits.sort((a,b)=>a-b);
+  ctx.lineWidth=8;ctx.lineCap="round";ctx.lineJoin="round";
+  let start=0;
+  for(let si=0;si<=splits.length;si++){
+    let end=si<splits.length?splits[si]:pathLine.length-1;
+    if(end<=start)continue;
+    ctx.strokeStyle=colors[si%colors.length];
+    ctx.beginPath();ctx.moveTo(pathLine[start].x,pathLine[start].y);
+    for(let i=start+1;i<=end;i++)ctx.lineTo(pathLine[i].x,pathLine[i].y);
+    ctx.stroke();
+    start=end;
+  }
 }
 
 function drawCrosshair(){
@@ -363,7 +449,7 @@ function draw(){
   let fs=currentStores.filter(s=>s.floor===currentFloor);
   fs.forEach(s=>drawStoreButton(s));
   drawNonStoreBtns();drawFloorSwitch();drawUIBtns();
-  drawPathLine();drawCrosshair();drawClickPoint();drawCoord();
+  drawPathLine();drawWaypoints();drawCrosshair();drawClickPoint();drawCoord();
 }
 
 async function refreshAndDraw(){await fetchStores();draw()}
@@ -473,6 +559,34 @@ document.getElementById("sortResults").addEventListener("click",e=>{
   setTimeout(()=>navToDetail(n),300);
 });
 
+// ===== 途经点拖拽 & 删除 =====
+canvas.addEventListener("mousedown",e=>{
+  let rect=canvas.getBoundingClientRect();
+  let cx=e.clientX-rect.left,cy=e.clientY-rect.top;
+  let idx=hitWaypoint(cx,cy);
+  if(idx>=0){draggingWaypointIndex=idx;waypointDragMoved=false;}
+});
+canvas.addEventListener("mousemove",e=>{
+  if(draggingWaypointIndex<0)return;
+  let rect=canvas.getBoundingClientRect();
+  let cx=e.clientX-rect.left,cy=e.clientY-rect.top;
+  let snap=snapToCorridor(currentFloor,cx,cy);
+  waypoints[draggingWaypointIndex]=snap;
+  waypointDragMoved=true;
+  draw();
+});
+canvas.addEventListener("mouseup",async e=>{
+  if(draggingWaypointIndex<0)return;
+  draggingWaypointIndex=-1;
+  if(waypointDragMoved){waypointDragMoved=false;await recalculatePath();}
+});
+canvas.addEventListener("contextmenu",async e=>{
+  let rect=canvas.getBoundingClientRect();
+  let cx=e.clientX-rect.left,cy=e.clientY-rect.top;
+  let idx=hitWaypoint(cx,cy);
+  if(idx>=0){e.preventDefault();waypoints.splice(idx,1);await recalculatePath();}
+});
+
 // ===== Canvas 点击 =====
 canvas.addEventListener("click",async e=>{
   let rect=canvas.getBoundingClientRect();
@@ -508,8 +622,8 @@ canvas.addEventListener("click",async e=>{
       else if(cy>=130&&cy<=180)tgt="escape";
       else if(cy>=195&&cy<=245)tgt="lift";
       if(tgt){
-        let r=await pathfind(currentFloor,clickPoint.x,clickPoint.y,tgt);
-        if(r.path){pathLine=r.path;
+        let r=await pathfind(currentFloor,clickPoint.x,clickPoint.y,tgt,waypoints);
+        if(r.path){currentTarget=tgt;pathLine=r.path;
           document.getElementById("pathInfo").style.display="block";
           document.getElementById("pathInfo").textContent=(r.message?r.message+" | ":"")+r.directions;
           draw()}
@@ -518,6 +632,9 @@ canvas.addEventListener("click",async e=>{
     return;
   }
   if(cx>=10&&cx<=60&&cy>=550&&cy<=600){switchFloor("F0");return}
+
+  // 途经点点击（不触发其他逻辑）
+  if(hitWaypoint(cx,cy)>=0)return;
 
   // 商铺点击
   let fs=currentStores.filter(s=>s.floor===currentFloor);
@@ -539,11 +656,24 @@ canvas.addEventListener("click",async e=>{
     if(cx>=bx&&cx<=bx+bw&&cy>=by&&cy<=by+bh){navToDetail(s.name);return}
   }
 
+  // 途经点点击检测
+  if(pathLine&&pathLine.length>=2&&currentTarget&&(currentFloor==="F1"||currentFloor==="F2")){
+    let wp=hitPathLine(cx,cy);
+    if(wp){
+      waypoints.push(wp);
+      let r=await pathfind(currentFloor,clickPoint.x,clickPoint.y,currentTarget,waypoints);
+      if(r.path){pathLine=r.path;
+        document.getElementById("pathInfo").style.display="block";
+        document.getElementById("pathInfo").textContent=(r.message?r.message+" | ":"")+r.directions;}
+      draw();return;
+    }
+  }
+
   // 走廊点击
   if(currentFloor==="F1"||currentFloor==="F2"){
     let r=await fetch(`/api/check_path?floor=${currentFloor}&x=${Math.round(cx)}&y=${Math.round(cy)}`);
     let d=await r.json();
-    if(d.on_path){clickPoint={x:Math.round(cx),y:Math.round(cy)};draw()}
+    if(d.on_path){clickPoint={x:Math.round(cx),y:Math.round(cy)};pathLine=null;waypoints=[];currentTarget=null;draw()}
   }
 });
 
