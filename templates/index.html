@@ -58,7 +58,9 @@ canvas{display:block}
 .write-row button{padding:6px 16px;background:#27ae60;color:#fff;border:none;border-radius:6px;cursor:pointer}
 
 /* 路径信息条 */
-#pathInfo{display:none;position:absolute;left:50%;top:0;transform:translateX(-50%);background:rgba(0,0,0,0.85);color:#f1c40f;padding:4px 16px;border-radius:0 0 8px 8px;font-size:13px;z-index:20;white-space:nowrap;max-width:900px;overflow:hidden;text-overflow:ellipsis}
+#pathInfo{display:none;position:absolute;left:50%;top:0;transform:translateX(-50%);background:rgba(0,0,0,0.85);color:#f1c40f;padding:4px 16px;border-radius:0 0 8px 8px;font-size:13px;z-index:20;white-space:nowrap;max-width:900px;overflow-x:auto;cursor:grab;user-select:none}
+#pathInfo::-webkit-scrollbar{display:none}
+#pathInfo.dragging{cursor:grabbing}
 </style>
 </head>
 <body>
@@ -110,6 +112,9 @@ let currentSlideScore=5.0;
 let waypoints=[];
 let draggingWaypointIndex=-1;
 let waypointDragMoved=false;
+let waypointPressIdx=-1;
+let waypointPressStart=null;
+let waypointPressTime=0;
 let currentTarget=null;
 
 // 页面返回栈（严格复刻 C 代码 back_screen_records + back_counts）
@@ -202,10 +207,10 @@ function navToRating(){
 function goBack(){
   let p=backPop();
   if(p==="detail"){gotoPage("detail");renderDetail();draw()}
-  else{currentFloor=p;clickPoint=null;pathLine=null;waypoints=[];draggingWaypointIndex=-1;waypointDragMoved=false;currentTarget=null;gotoPage("page");document.getElementById("pathInfo").style.display="none";refreshAndDraw()}
+  else{currentFloor=p;clickPoint=null;pathLine=null;waypoints=[];draggingWaypointIndex=-1;waypointDragMoved=false;waypointPressIdx=-1;waypointPressStart=null;currentTarget=null;gotoPage("page");document.getElementById("pathInfo").style.display="none";refreshAndDraw()}
 }
 function switchFloor(f){
-  currentFloor=f;clickPoint=null;pathLine=null;waypoints=[];draggingWaypointIndex=-1;waypointDragMoved=false;currentTarget=null;
+  currentFloor=f;clickPoint=null;pathLine=null;waypoints=[];draggingWaypointIndex=-1;waypointDragMoved=false;waypointPressIdx=-1;waypointPressStart=null;currentTarget=null;
   backInit();
   gotoPage("page");
   document.getElementById("pathInfo").style.display="none";
@@ -559,33 +564,53 @@ document.getElementById("sortResults").addEventListener("click",e=>{
   setTimeout(()=>navToDetail(n),300);
 });
 
-// ===== 途经点拖拽 & 删除 =====
+// ===== 途经点拖拽 & 长按删除 =====
 canvas.addEventListener("mousedown",e=>{
   let rect=canvas.getBoundingClientRect();
   let cx=e.clientX-rect.left,cy=e.clientY-rect.top;
   let idx=hitWaypoint(cx,cy);
-  if(idx>=0){draggingWaypointIndex=idx;waypointDragMoved=false;}
+  if(idx>=0){
+    waypointPressIdx=idx;
+    waypointPressStart={x:cx,y:cy};
+    waypointPressTime=Date.now();
+  }
 });
 canvas.addEventListener("mousemove",e=>{
-  if(draggingWaypointIndex<0)return;
+  if(waypointPressIdx<0&&draggingWaypointIndex<0)return;
   let rect=canvas.getBoundingClientRect();
   let cx=e.clientX-rect.left,cy=e.clientY-rect.top;
-  let snap=snapToCorridor(currentFloor,cx,cy);
-  waypoints[draggingWaypointIndex]=snap;
-  waypointDragMoved=true;
-  draw();
+  if(waypointPressIdx>=0){
+    let dx=cx-waypointPressStart.x,dy=cy-waypointPressStart.y;
+    if(Math.sqrt(dx*dx+dy*dy)>3){
+      draggingWaypointIndex=waypointPressIdx;
+      waypointPressIdx=-1;waypointPressStart=null;
+      waypointDragMoved=false;
+    }
+  }
+  if(draggingWaypointIndex>=0){
+    let snap=snapToCorridor(currentFloor,cx,cy);
+    waypoints[draggingWaypointIndex]=snap;
+    waypointDragMoved=true;
+    draw();
+  }
 });
 canvas.addEventListener("mouseup",async e=>{
+  if(waypointPressIdx>=0){
+    let elapsed=Date.now()-waypointPressTime;
+    let idx=waypointPressIdx;
+    waypointPressIdx=-1;waypointPressStart=null;
+    if(elapsed>=500){
+      waypoints.splice(idx,1);
+      await recalculatePath();
+    }
+    return;
+  }
   if(draggingWaypointIndex<0)return;
+  let idx=draggingWaypointIndex;
   draggingWaypointIndex=-1;
   if(waypointDragMoved){waypointDragMoved=false;await recalculatePath();}
 });
-canvas.addEventListener("contextmenu",async e=>{
-  let rect=canvas.getBoundingClientRect();
-  let cx=e.clientX-rect.left,cy=e.clientY-rect.top;
-  let idx=hitWaypoint(cx,cy);
-  if(idx>=0){e.preventDefault();waypoints.splice(idx,1);await recalculatePath();}
-});
+
 
 // ===== Canvas 点击 =====
 canvas.addEventListener("click",async e=>{
@@ -674,6 +699,27 @@ canvas.addEventListener("click",async e=>{
     let r=await fetch(`/api/check_path?floor=${currentFloor}&x=${Math.round(cx)}&y=${Math.round(cy)}`);
     let d=await r.json();
     if(d.on_path){clickPoint={x:Math.round(cx),y:Math.round(cy)};pathLine=null;waypoints=[];currentTarget=null;draw()}
+  }
+});
+
+// ===== 路径信息条拖拽滚动 =====
+let pathInfoDrag=false,pathInfoStartX=0,pathInfoScrollLeft=0;
+document.getElementById("pathInfo").addEventListener("mousedown",e=>{
+  pathInfoDrag=true;
+  pathInfoStartX=e.clientX;
+  pathInfoScrollLeft=e.target.scrollLeft;
+  e.target.classList.add("dragging");
+});
+document.addEventListener("mousemove",e=>{
+  if(!pathInfoDrag)return;
+  let el=document.getElementById("pathInfo");
+  let dx=e.clientX-pathInfoStartX;
+  el.scrollLeft=pathInfoScrollLeft-dx;
+});
+document.addEventListener("mouseup",()=>{
+  if(pathInfoDrag){
+    document.getElementById("pathInfo").classList.remove("dragging");
+    pathInfoDrag=false;
   }
 });
 
