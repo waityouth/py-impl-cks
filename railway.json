@@ -4,6 +4,7 @@
     "buildCommand": "pip install -r requirements.txt"
   },
   "deploy": {
-    "startCommand": "gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120"
+    "startCommand": "gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120 --log-level debug",
+    "restartPolicyType": "ON_FAILURE"
   }
 }
